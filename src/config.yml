@@ -1,0 +1,18 @@
+opencti:
+  url: 'https://opencti.novasoc.space'
+  token: '32cec728-55d9-476b-9851-afbb60109bb7' #ChangeMe
+  ssl_verify: true
+
+connector:
+  queue_protocol: api
+  type: 'EXTERNAL_IMPORT'
+  id: 'ee6695a9-5c4a-4290-8bb2-103ed12f2673'
+  name: 'LOPM Connector'
+  scope: 'domain-name'
+  log_level: 'debug' # optional (default: 'error')
+  duration_period: 'PT24H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+lopmconnector:
+  #api_base_url: 'https://example.com'
+  #api_key: '32cec728-55d9-476b-9851-afbb60109bb7'
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')

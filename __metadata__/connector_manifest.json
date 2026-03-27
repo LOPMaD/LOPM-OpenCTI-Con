@@ -1,0 +1,19 @@
+{
+  "title": "LOPM Connector",
+  "slug": "lopmconnector",
+  "description": "LOPM connector https://phishing.army/download/phishing_army_blocklist.txt",
+  "short_description": "https://phishing.army/download/phishing_army_blocklist.txt",
+  "logo": null,
+  "use_cases" : [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/LOPMaD/LOPM-OpenCTI-Con.git",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-lopmconnector",
+  "container_type": "EXTERNAL_IMPORT"
+}

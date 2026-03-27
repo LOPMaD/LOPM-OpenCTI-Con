@@ -1,0 +1,24 @@
+services:
+  connector-lopmconnector:
+    image: lopmconnector:latest # 'lopmconnector' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=https://opencti.novasoc.space
+      - OPENCTI_TOKEN=32cec728-55d9-476b-9851-afbb60109bb7 #ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ee6695a9-5c4a-4290-8bb2-103ed12f2673
+      - CONNECTOR_NAME='LOPM Connector'
+      - CONNECTOR_SCOPE='domain-name'
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD='PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-lopmconnector
+      - LOPMCONNECTOR_API_BASE_URL='https://example.com'
+      - LOPMCONNECTOR_API_KEY='32cec728-55d9-476b-9851-afbb60109bb7'
+      - LOPMCONNECTOR_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+    restart: always
+    networks:
+      - opencti_default
+
+networks:
+  opencti_default:
+    external: true
