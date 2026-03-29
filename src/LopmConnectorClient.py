@@ -4,6 +4,7 @@ from pydantic import HttpUrl
 
 class LopmConnectorClient:
 
+    duplicate_set = set() 
     def get_entities(self, params=None) -> dict:
         
         # If params is None, retrieve all CVEs in National Vulnerability Database
@@ -13,13 +14,14 @@ class LopmConnectorClient:
         try:
             
             r = requests.request('GET', "https://phishing.army/download/phishing_army_blocklist.txt")
-            start_index = 446
-            raw_text = r.text[start_index:]
-            block_list = [
-            line.strip()                     
-            for line in raw_text.splitlines()
-            ]
-
+            lines = r.text[446:].splitlines()
+            
+            block_list = []
+            for line in lines:
+                clean_line = line.strip()
+                if clean_line and clean_line not in self.duplicate_set:
+                    block_list.append(clean_line)
+                    self.duplicate_set.add(clean_line)
 
             return block_list
 
