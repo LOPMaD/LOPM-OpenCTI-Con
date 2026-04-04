@@ -1,5 +1,8 @@
 import sys
+import stix2
+import logging
 from datetime import datetime, timezone
+from stix2 import Bundle, Indicator, Relationship, ExternalReference, TLP_WHITE
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from LopmConnectorClient import LopmConnectorClient    
@@ -15,59 +18,121 @@ class LopmConnector:
 
         self.client = LopmConnectorClient()
 
+        self.confidence_level = get_config_variable("CONNECTOR_CONFIDENCE_LEVEL",
+            ['connector', 'confidence_level'], 
+            self.config, True)
+
         self.converter_to_stix = LopmConverterToStix(
             self.helper,
             tlp_level=get_config_variable("TLP_LEVEL", ['lopmconnector', 'tlp_level'], self.config),
         )
-    
+
+        self.marking = self.helper.api.marking_definition.read(id=TLP_WHITE["id"])
+
+        self.organization = self.helper.api.identity.create(
+            type="Organization",
+            name="phishing.army",
+            description="phishing URLs https://phishing.army/download/phishing_army_blocklist.txt",
+            contact_information="none",
+        )
+
        
 
 
      
 
-    def _collect_intelligence(self) -> list:
+    def _collect_intelligence(self, last_index) -> list:
 
         # Collect intelligence from the source and convert into STIX object
         # :return: List of STIX objects
 
         stix_objects = []
+        indicator_objects = []
 
         stix_package_container = []
-        # Get entities from external sources
-        entities = self.client.get_entities()
+
+
         
+
+
+        # Get entities from external sources
+        entities, next_index = self.client.get_entities(last_index)
+        
+        #FOR INDICATOR
+        if not self.helper.api.label.read(id="Domain-Name"): 
+            self.helper.api.label.create(value="Domain-Name")
+
+        ext_ref = self.helper.api.external_reference.create(
+            source_name="phishing.army",
+            url=f"https://phishing.army/download/phishing_army_blocklist.txt"
+        )
+
+
+        valid_from = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z"))
+
+        #\FOR INDICATOR
+
+
         i = 1
         j = 0
         for entity in entities:
             print("Перетворено доменів у stix:", i, " Кількість пакетів:", j)
-            entity_to_stix = self.converter_to_stix.create_obs(entity)
+            
+            #FOR INDICATOR
+            stix_pattern=f"[domain-name:value = '{entity}']"
+
+            indicator = Indicator(
+                name=entity,
+                description="Phishing URL",
+                pattern_type="stix",
+                pattern=f"[domain-name:value = '{entity}']",
+                valid_from=valid_from,
+                labels=["Domain-Name", "phishing"],
+                created_by_ref=self.organization["standard_id"], # Используем standard_id
+                object_marking_refs=[self.marking["standard_id"]],
+                external_references=[ext_ref],
+                custom_properties={
+                    "x_opencti_main_observable_type": "Domain-Name",
+                    "x_opencti_score": 80
+                }
+            )
+            stix_objects.append(indicator)
+            
+
+            observable = self.converter_to_stix.create_obs(entity)
+            stix_objects.append(observable)
+            relationship = Relationship(
+                relationship_type="based-on",
+                source_ref=indicator.id,
+                target_ref=observable.id,
+                created_by_ref=self.organization["standard_id"],
+            )
+            stix_objects.append(relationship)
+        
             i += 1
-            stix_objects.append(entity_to_stix)
-            if len(stix_objects) == 500:
-                stix_objects.append(self.converter_to_stix.author)
-                stix_objects.append(self.converter_to_stix.tlp_marking)
-                
+            if len(stix_objects) >= 500:
                 stix_package_container.append(stix_objects)
                 
                 stix_objects = []
                 
-                i = 1
+                #i = 1
                 j += 1
 
 
        
         if len(stix_objects):
-            stix_objects.append(self.converter_to_stix.author)
-            stix_objects.append(self.converter_to_stix.tlp_marking)
-
             stix_package_container.append(stix_objects)
 
-        return stix_package_container
+        return stix_package_container, next_index
 
     def process_message(self) -> None:
         
         # Connector main process to collect intelligence
         # :return: None
+        
         
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
@@ -75,6 +140,16 @@ class LopmConnector:
         )
 
         try:
+
+            current_state = self.helper.get_state()
+            # Достаем оттуда индекс (если его нет, будет 0)
+            last_index = current_state.get("last_index", 0) if current_state else 0
+
+
+
+            
+
+
             # Get the current state
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
@@ -95,6 +170,8 @@ class LopmConnector:
             # Friendly name will be displayed on OpenCTI platform
             friendly_name = "LOPM feed"
 
+            
+            
             # Initiate a new work
 
             work_id = self.helper.api.work.initiate_work(
@@ -110,7 +187,7 @@ class LopmConnector:
 
 
 
-            stix_package_container = self._collect_intelligence()
+            stix_package_container, next_index = self._collect_intelligence(last_index)
             for stix_objects in stix_package_container:
                 if len(stix_objects):
                     # work_id = self.helper.api.work.initiate_work(
@@ -147,7 +224,10 @@ class LopmConnector:
                 current_state = {"last_run": current_state_datetime}
             self.helper.set_state(current_state)
 
-            
+            # Сохраняем новый индекс в OpenCTI, чтобы в следующий раз начать с него
+            self.helper.set_state({"last_index": next_index})
+
+
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
                 + str(last_run_datetime)
