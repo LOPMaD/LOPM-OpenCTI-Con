@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME='LOPM Connector'
       - CONNECTOR_SCOPE='domain-name'
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_DURATION_PERIOD=PT24H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      - CONNECTOR_DURATION_PERIOD=PT6H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-lopmconnector
       - LOPMCONNECTOR_API_BASE_URL='https://example.com'
       - LOPMCONNECTOR_API_KEY='32cec728-55d9-476b-9851-afbb60109bb7'
