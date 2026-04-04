@@ -10,7 +10,7 @@ connector:
   name: 'LOPM Connector'
   scope: 'domain-name'
   log_level: 'debug' 
-  duration_period: 'PT24H' 
+  duration_period: 'PT6H' 
   confidence_level: 70
 
 lopmconnector:
